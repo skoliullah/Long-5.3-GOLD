@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Petal Risk & Portfolio Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            400: '#FACC15',
+                            500: '#EAB308',
+                            600: '#D97706'
+                        },
+                        darkBg: '#0F172A',
+                        cardBg: '#1E293B'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gold-gradient-text {
+            background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-200 min-h-screen font-sans pb-12">
+
+    <!-- Header Navbar -->
+    <header class="bg-cardBg border-b border-amber-500/30 px-6 py-4 shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-amber-500/10 rounded-lg border border-amber-500/40">
+                    🏆
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold gold-gradient-text tracking-wide">GOLD PETAL RISK MANAGER</h1>
+                    <p class="text-xs text-amber-400/70">MCX Risk, Liquidation & Leverage Dashboard</p>
+                </div>
+            </div>
+            
+            <!-- Security Lock / Unlock Switch -->
+            <div class="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-700">
+                <span id="lockStatusText" class="text-xs font-semibold text-emerald-400">UNLOCKED</span>
+                <button id="lockToggleBtn" onclick="toggleLock()" class="px-3 py-1 text-xs font-bold rounded-lg transition-all bg-emerald-600 hover:bg-emerald-500 text-white">
+                    🔓 Lock Data
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Top Overview Stats -->
+        <div class="lg:col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-cardBg p-5 rounded-2xl border border-amber-500/20 shadow-md">
+                <p class="text-xs text-slate-400 font-medium">TOTAL GOLD HOLDINGS</p>
+                <h3 id="statHoldings" class="text-2xl font-extrabold text-amber-400 mt-1">0.00 Grams</h3>
+            </div>
+            <div class="bg-cardBg p-5 rounded-2xl border border-amber-500/20 shadow-md">
+                <p class="text-xs text-slate-400 font-medium">TOTAL POSITION VALUE</p>
+                <h3 id="statPosValue" class="text-2xl font-extrabold text-white mt-1">₹0.00</h3>
+            </div>
+            <div class="bg-cardBg p-5 rounded-2xl border border-amber-500/20 shadow-md">
+                <p class="text-xs text-slate-400 font-medium">ACTIVE WALLET BALANCE</p>
+                <h3 id="statWallet" class="text-2xl font-extrabold text-emerald-400 mt-1">₹0.00</h3>
+            </div>
+            <div class="bg-cardBg p-5 rounded-2xl border border-amber-500/20 shadow-md">
+                <p class="text-xs text-slate-400 font-medium">EFFECTIVE LEVERAGE</p>
+                <h3 id="statLeverage" class="text-2xl font-extrabold text-amber-300 mt-1">0.00x</h3>
+            </div>
+        </div>
+
+        <!-- Left Column: Inputs & Sell Execution -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Trade Entry Box -->
+            <div class="bg-cardBg p-6 rounded-2xl border border-slate-700 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-amber-400 flex items-center gap-2">
+                        <span>📝</span> Active Portfolio Entry
+                    </h2>
+                    <button onclick="resetData()" id="deleteBtn" class="text-xs bg-red-600/20 text-red-400 border border-red-500/30 px-3 py-1 rounded-lg hover:bg-red-600/40 transition">
+                        🗑️ Delete / Reset
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Buy Entry Price per Gram (₹)</label>
+                        <input type="number" id="inputEntryPrice" placeholder="e.g. 15300" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-300 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Total Quantity Held (Grams)</label>
+                        <input type="number" id="inputGrams" placeholder="e.g. 2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-300 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Total Active Wallet Balance (₹)</label>
+                        <input type="number" id="inputWallet" placeholder="e.g. 5000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-emerald-400 focus:outline-none focus:border-amber-500">
+                    </div>
+
+                    <button onclick="calculateTrade()" id="calcBtn" class="w-full bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:opacity-95 text-slate-950 font-bold py-3 rounded-xl shadow-lg transition">
+                        ⚡ Calculate Position & Leverage
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sell Entry & Execution Box -->
+            <div class="bg-cardBg p-6 rounded-2xl border border-red-500/30 shadow-xl space-y-4">
+                <h2 class="text-base font-bold text-red-400 flex items-center gap-2">
+                    <span>💰</span> Sell Entry & Profit Realization
+                </h2>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Sell Price per Gram (₹)</label>
+                        <input type="number" id="inputSellPrice" placeholder="e.g. 15800" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-amber-300 focus:outline-none focus:border-red-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Sell Qty (Grams)</label>
+                            <input type="number" id="inputSellGrams" placeholder="e.g. 1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-amber-300 focus:outline-none focus:border-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Sell Charges (₹)</label>
+                            <input type="number" id="inputSellCharges" placeholder="e.g. 50" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-amber-300 focus:outline-none focus:border-red-500">
+                        </div>
+                    </div>
+
+                    <button onclick="executeSell()" id="sellExecBtn" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl shadow-md transition text-xs">
+                        🔴 Execute Sell & Auto-Update Wallet/Leverage
+                    </button>
+                </div>
+
+                <!-- Sell Result Preview -->
+                <div id="sellReportBox" class="hidden bg-slate-950 p-4 rounded-xl border border-red-500/40 text-xs space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Gross Realized PnL:</span>
+                        <span id="sellGrossPnL" class="font-bold">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Net Realized PnL (After Charges):</span>
+                        <span id="sellNetPnL" class="font-bold">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-800 pt-2">
+                        <span class="text-slate-400">Updated Wallet Balance:</span>
+                        <span id="sellNewWallet" class="font-bold text-emerald-400">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">New Effective Leverage:</span>
+                        <span id="sellNewLeverage" class="font-bold text-amber-300">0.00x</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Safety Report & Live CMP Box -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Primary Risk Analysis Card -->
+            <div class="bg-cardBg p-6 rounded-2xl border border-slate-700 shadow-xl space-y-4">
+                <h2 class="text-base font-bold text-amber-400 border-b border-slate-700 pb-3">
+                    📊 Liquidation & Safe Fall Analysis
+                </h2>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-900/90 p-4 rounded-xl border border-red-500/30">
+                        <p class="text-xs text-red-400 font-medium">LIQUIDATION PRICE</p>
+                        <h4 id="resLiqPrice" class="text-xl font-bold text-red-400 mt-1">₹0.00</h4>
+                        <p id="resMaxFall" class="text-xs text-slate-400 mt-0.5">Max Safe Fall: 0.00%</p>
+                    </div>
+                    <div class="bg-slate-900/90 p-4 rounded-xl border border-emerald-500/30">
+                        <p class="text-xs text-emerald-400 font-medium">TARGET SELL PRICE</p>
+                        <h4 id="resTargetSell" class="text-xl font-bold text-emerald-400 mt-1">₹0.00</h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Equal Risk-Reward Target</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-xs bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <div>
+                        <span class="text-slate-400 block">Required Margin (8%):</span>
+                        <span id="resMargin" class="font-bold text-amber-300">₹0.00</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Free Buffer Balance:</span>
+                        <span id="resBuffer" class="font-bold text-emerald-400">₹0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic CMP Live Price & Top-Up Box -->
+            <div class="bg-gradient-to-br from-slate-900 via-cardBg to-amber-950/30 p-6 rounded-2xl border border-amber-500/40 shadow-2xl space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-base font-bold text-amber-300 flex items-center gap-2">
+                        <span>🎯</span> Live Market Price (CMP) Simulation
+                    </h2>
+                    <span class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full border border-amber-500/30">Temporary Checker</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Enter Live Gold Price (CMP in ₹)</label>
+                    <input type="number" id="inputCMP" placeholder="Type live price to simulate" class="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-4 py-2.5 text-amber-300 font-bold focus:outline-none">
+                </div>
+
+                <!-- Simulation Output Panel -->
+                <div id="cmpSimResult" class="hidden bg-slate-950/90 p-5 rounded-2xl border border-amber-500/40 space-y-4">
+                    
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2 text-xs">
+                        <span class="text-slate-400">Floating PnL at Current CMP:</span>
+                        <span id="simPnL" class="font-bold">₹0.00</span>
+                    </div>
+
+                    <!-- Mode 1: Pure Cash Top-up -->
+                    <div class="bg-slate-900/90 p-3 rounded-xl border border-blue-500/30 space-y-1">
+                        <p class="text-xs text-blue-400 font-bold">1️⃣ ONLY CASH TOP-UP (0 Grams Added)</p>
+                        <p class="text-xs text-slate-300">
+                            Current Safe Fall Protection maintain करने के लिए Cash Top-Up:
+                        </p>
+                        <h4 id="simPureTopUp" class="text-lg font-extrabold text-blue-300">₹0.00</h4>
+                    </div>
+
+                    <!-- Mode 2: Top-up + 1 Gram Addition -->
+                    <div class="bg-slate-900/90 p-3 rounded-xl border border-emerald-500/30 space-y-1">
+                        <p class="text-xs text-emerald-400 font-bold">2️⃣ TOP-UP + ADD 1 GRAM GOLD</p>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <p>New Avg Price: <span id="simNewAvg" class="font-bold text-amber-300">₹0.00</span></p>
+                            <p>New Liq Price: <span id="simNewLiq" class="font-bold text-red-400">₹0.00</span></p>
+                            <p>Required Top-Up Cash: <span id="simAdd1TopUp" class="font-extrabold text-emerald-400 text-sm">₹0.00</span></p>
+                        </div>
+                    </div>
+
+                    <button onclick="applySimTopUp()" id="applyTopUpBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 text-xs rounded-lg transition">
+                        ➕ Add Mode-1 Cash Top-Up to Wallet
+                    </button>
+                    
+                    <p class="text-[10px] text-slate-500 text-center">💡 CMP बॉक्स से प्राइस हटाने/डिलीट करने पर सब कुछ पहले जैसा रीसेट हो जाएगा।</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Client JavaScript Logic -->
+    <script>
+        let isLocked = false;
+        let lastSimPureTopUp = 0;
+
+        // Auto listener on CMP Box clear
+        document.getElementById('inputCMP').addEventListener('input', function() {
+            const val = this.value.trim();
+            if (val === '' || parseFloat(val) <= 0) {
+                document.getElementById('cmpSimResult').classList.add('hidden');
+            } else {
+                calculateTrade();
+            }
+        });
+
+        function toggleLock() {
+            isLocked = !isLocked;
+            const statusText = document.getElementById('lockStatusText');
+            const toggleBtn = document.getElementById('lockToggleBtn');
+            
+            const elements = ['inputEntryPrice', 'inputGrams', 'inputWallet', 'inputCMP', 'inputSellPrice', 'inputSellGrams', 'inputSellCharges', 'calcBtn', 'deleteBtn', 'sellExecBtn', 'applyTopUpBtn'];
+
+            if (isLocked) {
+                statusText.innerText = 'LOCKED 🔒';
+                statusText.className = 'text-xs font-semibold text-red-400';
+                toggleBtn.innerText = '🔒 Unlock Data';
+                toggleBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg transition-all bg-red-600 hover:bg-red-500 text-white';
+
+                elements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.disabled = true;
+                });
+            } else {
+                statusText.innerText = 'UNLOCKED 🔓';
+                statusText.className = 'text-xs font-semibold text-emerald-400';
+                toggleBtn.innerText = '🔓 Lock Data';
+                toggleBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg transition-all bg-emerald-600 hover:bg-emerald-500 text-white';
+
+                elements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.disabled = false;
+                });
+            }
+        }
+
+        async function calculateTrade() {
+            const entryPrice = document.getElementById('inputEntryPrice').value;
+            const grams = document.getElementById('inputGrams').value;
+            const wallet = document.getElementById('inputWallet').value;
+            const cmp = document.getElementById('inputCMP').value;
+
+            if (!entryPrice || grams === '' || !wallet) {
+                return;
+            }
+
+            const payload = {
+                entry_price: entryPrice,
+                grams: grams,
+                wallet_balance: wallet,
+                cmp_price: cmp || null
+            };
+
+            try {
+                const res = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (res.status !== 200) {
+                    alert(data.error || 'Calculation Error');
+                    return;
+                }
+
+                // Update Stats
+                document.getElementById('statHoldings').innerText = `${data.grams} Grams`;
+                document.getElementById('statPosValue').innerText = `₹${data.pos_value.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                document.getElementById('statWallet').innerText = `₹${data.wallet_balance.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                document.getElementById('statLeverage').innerText = `${data.effective_leverage.toFixed(2)}x`;
+
+                // Update Risk Report
+                document.getElementById('resLiqPrice').innerText = `₹${data.liq_price.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                document.getElementById('resMaxFall').innerText = `Max Safe Fall: ${data.fall_percent.toFixed(2)}%`;
+                document.getElementById('resTargetSell').innerText = `₹${data.target_sell_price.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                document.getElementById('resMargin').innerText = `₹${data.broker_margin.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                document.getElementById('resBuffer').innerText = `₹${data.free_buffer.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+
+                // CMP Simulation Panel
+                const simBox = document.getElementById('cmpSimResult');
+                if (data.cmp_sim) {
+                    simBox.classList.remove('hidden');
+                    const pnl = data.cmp_sim.unrealized_pnl;
+                    const pnlEl = document.getElementById('simPnL');
+                    pnlEl.innerText = `₹${pnl.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    pnlEl.className = pnl >= 0 ? 'font-bold text-emerald-400' : 'font-bold text-red-400';
+
+                    lastSimPureTopUp = data.cmp_sim.pure_topup_needed;
+                    document.getElementById('simPureTopUp').innerText = `₹${lastSimPureTopUp.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    
+                    document.getElementById('simNewAvg').innerText = `₹${data.cmp_sim.new_avg_price.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    document.getElementById('simNewLiq').innerText = `₹${data.cmp_sim.new_liq_price.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    document.getElementById('simAdd1TopUp').innerText = `₹${data.cmp_sim.add1_topup_needed.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                } else {
+                    simBox.classList.add('hidden');
+                }
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function executeSell() {
+            if (isLocked) {
+                alert('Data is locked! Please unlock to execute sell.');
+                return;
+            }
+
+            const entryPrice = document.getElementById('inputEntryPrice').value;
+            const currentGrams = document.getElementById('inputGrams').value;
+            const currentWallet = document.getElementById('inputWallet').value;
+
+            const sellPrice = document.getElementById('inputSellPrice').value;
+            const sellGrams = document.getElementById('inputSellGrams').value;
+            const sellCharges = document.getElementById('inputSellCharges').value || 0;
+
+            if (!sellPrice || !sellGrams || parseFloat(sellGrams) <= 0) {
+                alert('Please enter valid Sell Price and Sell Quantity.');
+                return;
+            }
+
+            const payload = {
+                entry_price: entryPrice,
+                grams: currentGrams,
+                wallet_balance: currentWallet,
+                sell_price: sellPrice,
+                sell_grams: sellGrams,
+                sell_charges: sellCharges
+            };
+
+            try {
+                const res = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (res.status !== 200) {
+                    alert(data.error || 'Sell Execution Error');
+                    return;
+                }
+
+                if (data.sell_result) {
+                    const sr = data.sell_result;
+                    
+                    // Show report
+                    const reportBox = document.getElementById('sellReportBox');
+                    reportBox.classList.remove('hidden');
+
+                    const grossEl = document.getElementById('sellGrossPnL');
+                    grossEl.innerText = `₹${sr.gross_realized_pnl.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    grossEl.className = sr.gross_realized_pnl >= 0 ? 'font-bold text-emerald-400' : 'font-bold text-red-400';
+
+                    const netEl = document.getElementById('sellNetPnL');
+                    netEl.innerText = `₹${sr.net_realized_pnl.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    netEl.className = sr.net_realized_pnl >= 0 ? 'font-bold text-emerald-400' : 'font-bold text-red-400';
+
+                    document.getElementById('sellNewWallet').innerText = `₹${sr.updated_wallet_balance.toLocaleString('en-IN', {maximumFractionDigits:2})}`;
+                    document.getElementById('sellNewLeverage').innerText = `${sr.new_effective_leverage.toFixed(2)}x`;
+
+                    // Update Main Wallet and Gram Inputs
+                    document.getElementById('inputGrams').value = sr.remaining_grams;
+                    document.getElementById('inputWallet').value = sr.updated_wallet_balance.toFixed(2);
+
+                    alert(`Sell Executed!\nNet PnL: ₹${sr.net_realized_pnl.toFixed(2)}\nNew Wallet: ₹${sr.updated_wallet_balance.toFixed(2)}\nNew Leverage: ${sr.new_effective_leverage.toFixed(2)}x`);
+
+                    // Clear sell inputs
+                    document.getElementById('inputSellPrice').value = '';
+                    document.getElementById('inputSellGrams').value = '';
+                    document.getElementById('inputSellCharges').value = '';
+
+                    // Recalculate main dashboard
+                    calculateTrade();
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('Server connection error.');
+            }
+        }
+
+        function applySimTopUp() {
+            if (isLocked) {
+                alert('Data is locked!');
+                return;
+            }
+            if (lastSimPureTopUp <= 0) {
+                alert('No top-up cash required.');
+                return;
+            }
+            const currentW = parseFloat(document.getElementById('inputWallet').value) || 0;
+            const updatedW = currentW + lastSimPureTopUp;
+            document.getElementById('inputWallet').value = updatedW.toFixed(2);
+            document.getElementById('inputCMP').value = ''; // clear CMP
+            document.getElementById('cmpSimResult').classList.add('hidden');
+            
+            alert(`Added ₹${lastSimPureTopUp.toFixed(2)} Top-Up to Wallet!`);
+            calculateTrade();
+        }
+
+        function resetData() {
+            if (isLocked) {
+                alert('Data is LOCKED! Unlock first to delete or reset.');
+                return;
+            }
+            if (confirm('Are you sure you want to reset all portfolio data?')) {
+                document.getElementById('inputEntryPrice').value = '';
+                document.getElementById('inputGrams').value = '';
+                document.getElementById('inputWallet').value = '';
+                document.getElementById('inputCMP').value = '';
+                document.getElementById('inputSellPrice').value = '';
+                document.getElementById('inputSellGrams').value = '';
+                document.getElementById('inputSellCharges').value = '';
+
+                document.getElementById('statHoldings').innerText = '0.00 Grams';
+                document.getElementById('statPosValue').innerText = '₹0.00';
+                document.getElementById('statWallet').innerText = '₹0.00';
+                document.getElementById('statLeverage').innerText = '0.00x';
+
+                document.getElementById('resLiqPrice').innerText = '₹0.00';
+                document.getElementById('resMaxFall').innerText = 'Max Safe Fall: 0.00%';
+                document.getElementById('resTargetSell').innerText = '₹0.00';
+                document.getElementById('resMargin').innerText = '₹0.00';
+                document.getElementById('resBuffer').innerText = '₹0.00';
+
+                document.getElementById('cmpSimResult').classList.add('hidden');
+                document.getElementById('sellReportBox').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
